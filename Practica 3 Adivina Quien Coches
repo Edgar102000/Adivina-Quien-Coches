@@ -1,0 +1,177 @@
+import random
+import json
+
+# Cargar la lista de coches desde un archivo JSON si existe
+def cargar_coches():
+    try:
+        with open("coches.json", "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        # Lista inicial por defecto
+        return [
+            {"marca": "BMW", "modelo": "M2", "color": "verde", "plataforma": "Cupe", "tipo": "Deportivo"},
+            {"marca": "BMW", "modelo": "X5", "color": "rojo", "plataforma": "SUV", "tipo": "Deportivo familiar"},
+            {"marca": "BMW", "modelo": "X6", "color": "blanco", "plataforma": "SUV", "tipo": "Deportivo familiar"},
+            {"marca": "Audi", "modelo": "A1", "color": "azul", "plataforma": "sedán", "tipo": "Deportivo"},
+            {"marca": "Audi", "modelo": "Q5", "color": "gris", "plataforma": "SUV", "tipo": "Deportivo familiar"},
+            {"marca": "Audi", "modelo": "TT", "color": "blanco", "plataforma": "Cupe", "tipo": "Deportivo"},
+            {"marca": "Toyota", "modelo": "Corolla", "color": "negro", "plataforma": "sedán", "tipo": "Utilitario"},
+            {"marca": "Toyota", "modelo": "Rav4", "color": "plata", "plataforma": "SUV", "tipo": "Familiar"},
+            {"marca": "Toyota", "modelo": "Sienna", "color": "café", "plataforma": "SUV", "tipo": "Familiar"},
+            {"marca": "Ford", "modelo": "Focus", "color": "blanco", "plataforma": "hatchback", "tipo": "Utilitario"},
+            {"marca": "Ford", "modelo": "Mustang", "color": "negro", "plataforma": "Cupe", "tipo": "Deportivo"},
+            {"marca": "Mercedes", "modelo": "GLC", "color": "gris", "plataforma": "SUV", "tipo": "Deportivo familiar"},
+            {"marca": "Nissan", "modelo": "X-trail", "color": "rojo", "plataforma": "SUV", "tipo": "Familiar"},
+            {"marca": "Honda", "modelo": "Civic", "color": "azul", "plataforma": "sedán", "tipo": "Utilitario"},
+            {"marca": "Chevrolet", "modelo": "Camaro", "color": "amarillo", "plataforma": "Cupe", "tipo": "Deportivo"}
+            # Añadir otros coches...
+        ]
+
+# Guardar la lista de coches en un archivo JSON
+def guardar_coches(coches):
+    with open("coches.json", "w") as file:
+        json.dump(coches, file)
+    print("Lista de coches actualizada guardada exitosamente.")
+
+# Actualizar la memoria de aprendizaje
+def actualizar_memoria(atributo, valor, respuesta):
+    clave = f"{atributo}-{valor}"
+    if clave not in memoria_aprendizaje:
+        memoria_aprendizaje[clave] = {"sí": 0, "no": 0}
+    memoria_aprendizaje[clave][respuesta] += 1
+
+# Elegir la pregunta óptima
+def elegir_pregunta_optima(coches_disponibles, preguntas_hechas):
+    mejores_preguntas = []
+    for coche in coches_disponibles:
+        for atributo, valor in coche.items():
+            clave = f"{atributo}-{valor}"
+            if clave in memoria_aprendizaje and clave not in preguntas_hechas:
+                frecuencia_si = memoria_aprendizaje[clave]["sí"]
+                frecuencia_no = memoria_aprendizaje[clave]["no"]
+                diferencia = abs(frecuencia_si - frecuencia_no)
+                mejores_preguntas.append((diferencia, atributo, valor))
+    
+    mejores_preguntas.sort(reverse=True, key=lambda x: x[0])
+    
+    if mejores_preguntas:
+        return mejores_preguntas[0][1], mejores_preguntas[0][2]
+    
+    # Si no hay datos suficientes en la memoria o todas las preguntas se han hecho, preguntar algo aleatorio
+    preguntas_disponibles = []
+    for coche in coches_disponibles:
+        for atributo, valor in coche.items():
+            if f"{atributo}-{valor}" not in preguntas_hechas:
+                preguntas_disponibles.append((atributo, valor))
+    
+    if preguntas_disponibles:
+        return random.choice(preguntas_disponibles)
+    
+    return None, None  # No hay más preguntas posibles
+
+# Preguntar al usuario
+def preguntar_usuario(pregunta):
+    respuesta = input(pregunta + " (sí/no): ").strip().lower()
+    while respuesta not in ["sí", "no"]:
+        respuesta = input("Por favor responde con 'sí' o 'no': ").strip().lower()
+    return respuesta
+
+# Filtrar coches en base a las respuestas
+def filtrar_coches(coches, atributo, valor, respuesta):
+    if respuesta == "sí":
+        return [coche for coche in coches if coche[atributo] == valor]
+    else:
+        return [coche for coche in coches if coche[atributo] != valor]
+
+# Guardar la memoria de aprendizaje en un archivo JSON
+def guardar_memoria():
+    with open("memoria_aprendizaje.json", "w") as file:
+        json.dump(memoria_aprendizaje, file)
+    print("Memoria guardada exitosamente.")
+
+# Cargar la memoria de aprendizaje desde un archivo JSON
+def cargar_memoria():
+    global memoria_aprendizaje
+    try:
+        with open("memoria_aprendizaje.json", "r") as file:
+            memoria_aprendizaje = json.load(file)
+        print("Memoria cargada exitosamente.")
+    except FileNotFoundError:
+        print("No se encontró el archivo de memoria. Se iniciará con memoria vacía.")
+        memoria_aprendizaje = {}
+
+# Agregar un nuevo coche cuando el programa falla en adivinar
+def agregar_nuevo_coche(coches):
+    print("Parece que no he podido adivinar el coche que pensabas.")
+    nueva_marca = input("¿Cuál es la marca del coche? ")
+    nuevo_modelo = input("¿Cuál es el modelo del coche? ")
+    nuevo_color = input("¿Cuál es el color del coche? ")
+    nueva_plataforma = input("¿Cuál es la plataforma del coche (e.g. SUV, sedán)? ")
+    nuevo_tipo = input("¿Cuál es el tipo del coche (e.g. Deportivo, Familiar)? ")
+    
+    nuevo_coche = {
+        "marca": nueva_marca,
+        "modelo": nuevo_modelo,
+        "color": nuevo_color,
+        "plataforma": nueva_plataforma,
+        "tipo": nuevo_tipo
+    }
+
+    # Verificar si el coche ya existe
+    if any(nuevo_coche.items() == coche.items() for coche in coches):
+        print("Este coche ya está registrado en el sistema. No se añadirá de nuevo.")
+    else:
+        coches.append(nuevo_coche)
+        guardar_coches(coches)
+        print("¡Gracias! He aprendido algo nuevo.")
+
+# Bucle principal del juego
+def jugar():
+    coches = cargar_coches()  # Cargar la lista de coches desde el archivo JSON
+    cargar_memoria()  # Cargar la memoria de aprendizaje antes de jugar
+    
+    while True:
+        coches_disponibles = coches.copy()
+        preguntas_hechas = set()  # Lista de preguntas ya realizadas
+        adivinanza_exitosa = False  # Bandera para saber si se adivinó
+
+        while len(coches_disponibles) > 1:
+            # Elige la mejor pregunta basándose en la memoria y en preguntas no repetidas
+            atributo, valor = elegir_pregunta_optima(coches_disponibles, preguntas_hechas)
+            
+            if atributo is None:  # No quedan más preguntas por hacer
+                break
+            
+            # Pregunta al jugador
+            respuesta = preguntar_usuario(f"¿El coche es {atributo} {valor}?")
+            
+            # Actualiza la memoria de aprendizaje y registra la pregunta hecha
+            actualizar_memoria(atributo, valor, respuesta)
+            preguntas_hechas.add(f"{atributo}-{valor}")
+            
+            # Filtra los coches basados en la respuesta del jugador
+            coches_disponibles = filtrar_coches(coches_disponibles, atributo, valor, respuesta)
+
+        # Determina si adivinó o no
+        if len(coches_disponibles) == 1:
+            coche_adivinado = coches_disponibles[0]
+            print(f"¡Adiviné! El coche que estás pensando es un {coche_adivinado['marca']} {coche_adivinado['modelo']}.")
+            adivinanza_exitosa = True  # Se logró adivinar el coche
+        
+        if not adivinanza_exitosa:  # Si no se ha adivinado
+            agregar_nuevo_coche(coches)  # Agregar un coche nuevo solo si no se adivinó
+        
+        guardar_memoria()  # Guardar la memoria de aprendizaje después del juego
+        
+        # Preguntar si el usuario quiere jugar de nuevo
+        jugar_nuevamente = input("¿Quieres jugar de nuevo? (sí/no): ").strip().lower()
+        while jugar_nuevamente not in ["sí", "no"]:
+            jugar_nuevamente = input("Por favor responde con 'sí' o 'no': ").strip().lower()
+        
+        if jugar_nuevamente == "no":
+            print("Gracias por jugar. ¡Hasta luego!")
+            break  # Terminar el juego si el usuario no quiere jugar de nuevo
+
+# Ejecutar el juego
+if __name__ == "__main__":
+    jugar()
