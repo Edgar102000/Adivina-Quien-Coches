@@ -1,5 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct 28 20:24:23 2024
+
+@author: Edgar Ruíz
+"""
+
 import random
 import json
+import tkinter as tk
+from tkinter import messagebox, simpledialog
 
 # Cargar la lista de coches desde un archivo JSON si existe
 def cargar_coches():
@@ -24,14 +33,12 @@ def cargar_coches():
             {"marca": "Nissan", "modelo": "X-trail", "color": "rojo", "plataforma": "SUV", "tipo": "Familiar"},
             {"marca": "Honda", "modelo": "Civic", "color": "azul", "plataforma": "sedán", "tipo": "Utilitario"},
             {"marca": "Chevrolet", "modelo": "Camaro", "color": "amarillo", "plataforma": "Cupe", "tipo": "Deportivo"}
-            # Añadir otros coches...
         ]
 
 # Guardar la lista de coches en un archivo JSON
 def guardar_coches(coches):
     with open("coches.json", "w") as file:
         json.dump(coches, file)
-    print("Lista de coches actualizada guardada exitosamente.")
 
 # Actualizar la memoria de aprendizaje
 def actualizar_memoria(atributo, valor, respuesta):
@@ -57,7 +64,6 @@ def elegir_pregunta_optima(coches_disponibles, preguntas_hechas):
     if mejores_preguntas:
         return mejores_preguntas[0][1], mejores_preguntas[0][2]
     
-    # Si no hay datos suficientes en la memoria o todas las preguntas se han hecho, preguntar algo aleatorio
     preguntas_disponibles = []
     for coche in coches_disponibles:
         for atributo, valor in coche.items():
@@ -67,14 +73,12 @@ def elegir_pregunta_optima(coches_disponibles, preguntas_hechas):
     if preguntas_disponibles:
         return random.choice(preguntas_disponibles)
     
-    return None, None  # No hay más preguntas posibles
+    return None, None
 
-# Preguntar al usuario
+# Preguntar al usuario en la interfaz gráfica
 def preguntar_usuario(pregunta):
-    respuesta = input(pregunta + " (sí/no): ").strip().lower()
-    while respuesta not in ["sí", "no"]:
-        respuesta = input("Por favor responde con 'sí' o 'no': ").strip().lower()
-    return respuesta
+    respuesta = messagebox.askyesno("Pregunta", pregunta)
+    return "sí" if respuesta else "no"
 
 # Filtrar coches en base a las respuestas
 def filtrar_coches(coches, atributo, valor, respuesta):
@@ -87,7 +91,6 @@ def filtrar_coches(coches, atributo, valor, respuesta):
 def guardar_memoria():
     with open("memoria_aprendizaje.json", "w") as file:
         json.dump(memoria_aprendizaje, file)
-    print("Memoria guardada exitosamente.")
 
 # Cargar la memoria de aprendizaje desde un archivo JSON
 def cargar_memoria():
@@ -95,19 +98,16 @@ def cargar_memoria():
     try:
         with open("memoria_aprendizaje.json", "r") as file:
             memoria_aprendizaje = json.load(file)
-        print("Memoria cargada exitosamente.")
     except FileNotFoundError:
-        print("No se encontró el archivo de memoria. Se iniciará con memoria vacía.")
         memoria_aprendizaje = {}
 
 # Agregar un nuevo coche cuando el programa falla en adivinar
 def agregar_nuevo_coche(coches):
-    print("Parece que no he podido adivinar el coche que pensabas.")
-    nueva_marca = input("¿Cuál es la marca del coche? ")
-    nuevo_modelo = input("¿Cuál es el modelo del coche? ")
-    nuevo_color = input("¿Cuál es el color del coche? ")
-    nueva_plataforma = input("¿Cuál es la plataforma del coche (e.g. SUV, sedán)? ")
-    nuevo_tipo = input("¿Cuál es el tipo del coche (e.g. Deportivo, Familiar)? ")
+    nueva_marca = simpledialog.askstring("Nuevo Coche", "¿Cuál es la marca del coche?")
+    nuevo_modelo = simpledialog.askstring("Nuevo Coche", "¿Cuál es el modelo del coche?")
+    nuevo_color = simpledialog.askstring("Nuevo Coche", "¿Cuál es el color del coche?")
+    nueva_plataforma = simpledialog.askstring("Nuevo Coche", "¿Cuál es la plataforma del coche (e.g. SUV, sedán)?")
+    nuevo_tipo = simpledialog.askstring("Nuevo Coche", "¿Cuál es el tipo del coche (e.g. Deportivo, Familiar)?")
     
     nuevo_coche = {
         "marca": nueva_marca,
@@ -117,61 +117,56 @@ def agregar_nuevo_coche(coches):
         "tipo": nuevo_tipo
     }
 
-    # Verificar si el coche ya existe
     if any(nuevo_coche.items() == coche.items() for coche in coches):
-        print("Este coche ya está registrado en el sistema. No se añadirá de nuevo.")
+        messagebox.showinfo("Info", "Este coche ya está registrado en el sistema.")
     else:
         coches.append(nuevo_coche)
         guardar_coches(coches)
-        print("¡Gracias! He aprendido algo nuevo.")
+        messagebox.showinfo("Gracias", "¡He aprendido algo nuevo!")
 
-# Bucle principal del juego
+# Bucle principal del juego con interfaz gráfica
 def jugar():
-    coches = cargar_coches()  # Cargar la lista de coches desde el archivo JSON
-    cargar_memoria()  # Cargar la memoria de aprendizaje antes de jugar
+    coches = cargar_coches()
+    cargar_memoria()
+    coches_disponibles = coches.copy()
+    preguntas_hechas = set()
+    adivinanza_exitosa = False
+
+    while len(coches_disponibles) > 1:
+        atributo, valor = elegir_pregunta_optima(coches_disponibles, preguntas_hechas)
+        
+        if atributo is None:
+            break
+        
+        respuesta = preguntar_usuario(f"¿El coche es {atributo} {valor}?")
+        actualizar_memoria(atributo, valor, respuesta)
+        preguntas_hechas.add(f"{atributo}-{valor}")
+        coches_disponibles = filtrar_coches(coches_disponibles, atributo, valor, respuesta)
+
+    if len(coches_disponibles) == 1:
+        coche_adivinado = coches_disponibles[0]
+        messagebox.showinfo("¡Adiviné!", f"El coche que estás pensando es un {coche_adivinado['marca']} {coche_adivinado['modelo']}.")
+    else:
+        agregar_nuevo_coche(coches)
+
+    guardar_memoria()
+    jugar_nuevamente = messagebox.askyesno("Juego", "¿Quieres jugar de nuevo?")
+    if jugar_nuevamente:
+        jugar()
+    else:
+        messagebox.showinfo("Juego", "Gracias por jugar. ¡Hasta luego!")
+
+# Configuración de la ventana principal
+def iniciar_juego():
+    ventana = tk.Tk()
+    ventana.title("Adivina el Coche")
+    ventana.geometry("400x200")
     
-    while True:
-        coches_disponibles = coches.copy()
-        preguntas_hechas = set()  # Lista de preguntas ya realizadas
-        adivinanza_exitosa = False  # Bandera para saber si se adivinó
+    btn_jugar = tk.Button(ventana, text="Iniciar Juego", command=jugar, font=("Arial", 12))
+    btn_jugar.pack(pady=20)
+    
+    ventana.mainloop()
 
-        while len(coches_disponibles) > 1:
-            # Elige la mejor pregunta basándose en la memoria y en preguntas no repetidas
-            atributo, valor = elegir_pregunta_optima(coches_disponibles, preguntas_hechas)
-            
-            if atributo is None:  # No quedan más preguntas por hacer
-                break
-            
-            # Pregunta al jugador
-            respuesta = preguntar_usuario(f"¿El coche es {atributo} {valor}?")
-            
-            # Actualiza la memoria de aprendizaje y registra la pregunta hecha
-            actualizar_memoria(atributo, valor, respuesta)
-            preguntas_hechas.add(f"{atributo}-{valor}")
-            
-            # Filtra los coches basados en la respuesta del jugador
-            coches_disponibles = filtrar_coches(coches_disponibles, atributo, valor, respuesta)
-
-        # Determina si adivinó o no
-        if len(coches_disponibles) == 1:
-            coche_adivinado = coches_disponibles[0]
-            print(f"¡Adiviné! El coche que estás pensando es un {coche_adivinado['marca']} {coche_adivinado['modelo']}.")
-            adivinanza_exitosa = True  # Se logró adivinar el coche
-        
-        if not adivinanza_exitosa:  # Si no se ha adivinado
-            agregar_nuevo_coche(coches)  # Agregar un coche nuevo solo si no se adivinó
-        
-        guardar_memoria()  # Guardar la memoria de aprendizaje después del juego
-        
-        # Preguntar si el usuario quiere jugar de nuevo
-        jugar_nuevamente = input("¿Quieres jugar de nuevo? (sí/no): ").strip().lower()
-        while jugar_nuevamente not in ["sí", "no"]:
-            jugar_nuevamente = input("Por favor responde con 'sí' o 'no': ").strip().lower()
-        
-        if jugar_nuevamente == "no":
-            print("Gracias por jugar. ¡Hasta luego!")
-            break  # Terminar el juego si el usuario no quiere jugar de nuevo
-
-# Ejecutar el juego
+# Ejecutar la interfaz
 if __name__ == "__main__":
-    jugar()
+    iniciar_juego()
